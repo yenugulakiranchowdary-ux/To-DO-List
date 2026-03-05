@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Smart Calendar ToDo</title>
+
+<style>
+
+body{
+font-family:Segoe UI;
+background:linear-gradient(135deg,#eef2ff,#f8fafc);
+display:flex;
+justify-content:center;
+padding:40px;
+}
+
+.container{
+width:100%;
+max-width:1000px;
+background:white;
+padding:30px;
+border-radius:14px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+
+h2{margin-bottom:15px}
+
+form{
+display:flex;
+gap:10px;
+margin-bottom:15px;
+}
+
+input,button{
+padding:10px;
+border-radius:8px;
+border:1px solid #ddd;
+}
+
+button{
+background:#2563eb;
+color:white;
+border:none;
+cursor:pointer;
+}
+
+#search{
+width:100%;
+margin-bottom:10px;
+}
+
+/* FILTER BUTTONS */
+
+.filters{
+margin-bottom:20px;
+display:flex;
+gap:10px;
+}
+
+.filters button{
+background:#10b981;
+padding:6px 10px;
+font-size:12px;
+}
+
+/* CALENDAR HEADER */
+
+.cal-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:15px;
+}
+
+.cal-header button{
+padding:6px 10px;
+}
+
+/* CALENDAR */
+
+.calendar{
+display:grid;
+grid-template-columns:repeat(7,1fr);
+gap:10px;
+margin-bottom:25px;
+}
+
+.day{
+background:#f8fafc;
+border:1px solid #e2e8f0;
+border-radius:10px;
+padding:10px;
+min-height:90px;
+cursor:pointer;
+}
+
+.day:hover{
+background:#e0e7ff;
+}
+
+.today{
+border:2px solid #2563eb;
+background:#e0e7ff;
+}
+
+.task{
+display:block;
+font-size:10px;
+background:#2563eb;
+color:white;
+margin-top:4px;
+padding:2px 5px;
+border-radius:4px;
+}
+
+/* TABLE */
+
+table{
+width:100%;
+border-collapse:collapse;
+table-layout:fixed;
+}
+
+th{
+background:#f1f5f9;
+}
+
+th,td{
+padding:12px;
+border-bottom:1px solid #eee;
+}
+
+th:nth-child(1),td:nth-child(1){width:35%;}
+th:nth-child(2),td:nth-child(2){width:25%;}
+th:nth-child(3),td:nth-child(3){width:20%;}
+th:nth-child(4),td:nth-child(4){width:20%;}
+
+.done{
+text-decoration:line-through;
+opacity:.6;
+}
+
+.action{
+display:flex;
+gap:5px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Advanced TO Do list</h2>
+
+<form id="form">
+<input id="task" placeholder="Task">
+<input type="date" id="date">
+<button>Add</button>
+</form>
+
+<input id="search" placeholder="Search tasks">
+
+<div class="filters">
+<button onclick="show()">All</button>
+<button onclick="show(tasks.filter(t=>!t.done))">Pending</button>
+<button onclick="show(tasks.filter(t=>t.done))">Completed</button>
+</div>
+
+<div class="cal-header">
+<button id="prev">◀</button>
+<h3 id="month"></h3>
+<button id="next">▶</button>
+</div>
+
+<div id="calendar" class="calendar"></div>
+
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Date</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="table"></tbody>
+</table>
+
+</div>
+
+<script>
+
+let tasks=JSON.parse(localStorage.getItem("tasks"))||[],d=new Date()
+
+form.onsubmit=e=>{e.preventDefault();tasks.push({t:task.value,d:date.value,done:false});form.reset();save();show()}
+
+search.onkeyup=()=>show(tasks.filter(x=>x.t.toLowerCase().includes(search.value.toLowerCase())))
+
+prev.onclick=()=>{d.setMonth(d.getMonth()-1);draw()}
+next.onclick=()=>{d.setMonth(d.getMonth()+1);draw()}
+
+function save(){localStorage.setItem("tasks",JSON.stringify(tasks))}
+
+function show(list=tasks){
+table.innerHTML=""
+list.forEach((x,i)=>table.innerHTML+=`
+<tr class="${x.done?'done':''}">
+<td>${x.t}</td>
+<td>${x.d||"-"}</td>
+<td>${x.done?'Completed':'Pending'}</td>
+<td class="action">
+<button onclick="tasks[${i}].done=!tasks[${i}].done;save();show()">✔</button>
+<button onclick="let n=prompt('Edit',tasks[${i}].t);if(n){tasks[${i}].t=n;save();show()}">Edit</button>
+<button onclick="tasks.splice(${i},1);save();show()">X</button>
+</td></tr>`)
+draw()
+}
+
+function draw(){
+let y=d.getFullYear(),m=d.getMonth(),f=new Date(y,m,1).getDay(),l=new Date(y,m+1,0).getDate(),today=new Date().toISOString().split("T")[0]
+month.innerText=d.toLocaleString("default",{month:"long"})+" "+y
+calendar.innerHTML=""
+for(let i=0;i<f;i++)calendar.innerHTML+="<div></div>"
+for(let day=1;day<=l;day++){
+let full=y+"-"+String(m+1).padStart(2,"0")+"-"+String(day).padStart(2,"0")
+let cell=`<div class="day ${full===today?'today':''}" onclick="show(tasks.filter(t=>t.d==='${full}'))"><b>${day}</b>`
+tasks.forEach(t=>{if(t.d===full)cell+=`<span class="task">${t.t}</span>`})
+calendar.innerHTML+=cell+"</div>"
+}
+}
+
+setInterval(()=>{let today=new Date().toISOString().split("T")[0];tasks.forEach(t=>{if(t.d===today&&!t.done)alert("Reminder: "+t.t)})},3600000)
+
+show()
+
+</script>
+
+</body>
+</html>
